@@ -1,9 +1,9 @@
 "use client";
 import { useState } from "react";
-import Link from "next/link";
 import ComparisonUpload from "@/components/comparison/ComparisonUpload";
 import ComparisonResult from "@/components/comparison/ComparisonResult";
-import { ComparisonAnalysis } from "@/types/comparison";
+import FeatureToggle from "@/components/ui/FeatureToggle";
+import type { ComparisonAnalysis } from "@/types/comparison";
 
 export default function ComparePage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -20,6 +20,7 @@ export default function ComparePage() {
 
       console.log("Starting comparison upload...");
 
+      // Convert files to base64
       const yourDesignBase64 = await fileToBase64(yourDesign);
       const competitorDesignBase64 = await fileToBase64(competitorDesign);
 
@@ -39,6 +40,7 @@ export default function ComparePage() {
 
         console.log("Response status:", response.status);
 
+        // Check if response is JSON
         const contentType = response.headers.get("content-type");
         if (!contentType || !contentType.includes("application/json")) {
           throw new Error("Server returned non-JSON response");
@@ -49,6 +51,8 @@ export default function ComparePage() {
         if (!response.ok) {
           throw new Error(data.error || "Failed to analyze designs");
         }
+
+        console.log("Analysis data received");
 
         if (!data.analysis) {
           throw new Error("No analysis data received");
@@ -78,26 +82,29 @@ export default function ComparePage() {
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-6xl mx-auto px-4">
-        <div className="flex justify-between items-center mb-8">
-          <Link
-            href="/"
-            className="text-blue-600 hover:text-blue-800 transition-colors"
-          >
-            ← Back to Single Analysis
-          </Link>
-        </div>
-
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Design Comparison Analysis
+            Design Review Assistant
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Upload your design and a competitor&apos;s design to get a detailed
-            comparison and A/B testing suggestions.
+            Compare your design with a competitor's design to get detailed
+            insights and improvement suggestions.
           </p>
         </div>
 
+        <FeatureToggle />
+
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-2">
+              Design Comparison Analysis
+            </h2>
+            <p className="text-gray-600">
+              Upload your design and a competitor's design to get a detailed
+              comparison and A/B testing suggestions.
+            </p>
+          </div>
+
           <ComparisonUpload
             onUpload={handleComparisonUpload}
             isUploading={isAnalyzing}

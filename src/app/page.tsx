@@ -2,6 +2,7 @@
 import { useState } from "react";
 import FileUpload from "@/components/ui/FileUpload";
 import AnalysisResult from "@/components/design-review/AnalysisResult";
+import FeatureToggle from "@/components/ui/FeatureToggle";
 import type { DesignAnalysis } from "@/lib/api/openai";
 
 export default function Home() {
@@ -32,14 +33,21 @@ export default function Home() {
 
         console.log("Response status:", response.status);
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(
-            errorData.error || `HTTP error! status: ${response.status}`,
-          );
+        // Check if response is JSON
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          throw new Error("Server returned non-JSON response");
         }
 
         const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.error || `HTTP error! status: ${response.status}`,
+          );
+        }
+
+        console.log("Analysis data received");
 
         if (!data.analysis) {
           throw new Error("No analysis data received");
@@ -47,13 +55,12 @@ export default function Home() {
 
         setAnalysis(data.analysis);
       } catch (fetchError) {
+        console.error("Fetch error:", fetchError);
         if (
           fetchError instanceof TypeError &&
           fetchError.message === "Failed to fetch"
         ) {
-          throw new Error(
-            "Network error: Could not connect to the server. Please try again.",
-          );
+          throw new Error("Network error: Could not connect to the server");
         }
         throw fetchError;
       }
@@ -72,17 +79,28 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-4xl mx-auto px-4">
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             Design Review Assistant
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
-            Upload your design files to get AI-powered feedback on
-            accessibility, color contrast, and design principles.
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Analyze your design with AI-powered feedback on accessibility, color
+            contrast, and design principles.
           </p>
         </div>
 
+        <FeatureToggle />
+
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-2">
+              Single Design Analysis
+            </h2>
+            <p className="text-gray-600">
+              Upload a design file to get detailed feedback and recommendations.
+            </p>
+          </div>
+
           <FileUpload
             onFileUpload={handleFileUpload}
             isUploading={isAnalyzing}
