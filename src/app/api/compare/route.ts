@@ -1,48 +1,57 @@
 import { NextResponse } from "next/server";
-import { compareDesigns } from "@/lib/api/openai-compare";
+import { analyzeDesign } from "@/lib/api/openai";
 
-export const maxDuration = 60;
+export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  console.log("Compare API: Starting request handling");
+  const headers = {
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+  };
 
   try {
-    const body = await request.json();
-
-    console.log("Received request with body:", {
-      hasYourDesign: !!body.yourDesign,
-      hasCompetitorDesign: !!body.competitorDesign,
-    });
-
-    if (!body.yourDesign || !body.competitorDesign) {
-      return NextResponse.json(
-        { error: "Both designs are required for comparison" },
-        { status: 400 },
-      );
-    }
-
-    if (!process.env.OPENAI_API_KEY) {
-      console.error("OpenAI API key is missing in environment");
+    // Skip API key check during build
+    if (
+      process.env.VERCEL_ENV === "production" &&
+      !process.env.OPENAI_API_KEY
+    ) {
       return NextResponse.json(
         { error: "OpenAI API key is not configured" },
-        { status: 500 },
+        { status: 500, headers },
       );
     }
 
-    const analysis = await compareDesigns(
-      body.yourDesign,
-      body.competitorDesign,
-    );
-    return NextResponse.json({ analysis });
+    const body = await request.json();
+
+    if (!body.image) {
+      return NextResponse.json(
+        { error: "No image provided" },
+        { status: 400, headers },
+      );
+    }
+
+    const analysis = await analyzeDesign(body.image);
+    return NextResponse.json({ analysis }, { status: 200, headers });
   } catch (error) {
-    console.error("Error in comparison route:", error);
+    console.error("Error in analysis route:", error);
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error ? error.message : "Failed to compare designs",
-      },
-      { status: 500 },
+      { error: "Failed to analyze design" },
+      { status: 500, headers },
     );
   }
+}
+
+export async function OPTIONS(request: Request) {
+  return NextResponse.json(
+    {},
+    {
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      },
+    },
+  );
 }

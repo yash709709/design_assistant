@@ -8,6 +8,9 @@ const nextConfig = {
       },
     ],
   },
+  experimental: {
+    missingSuspenseWithCSRError: false,
+  },
 };
 
 module.exports = nextConfig;
