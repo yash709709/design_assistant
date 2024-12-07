@@ -13,23 +13,42 @@ export async function analyzeUserFlow(
   }
 
   try {
-    const prompt = `As a UX expert, analyze this user flow and provide detailed feedback and improvements. Consider user experience best practices, potential pain points, and optimization opportunities.
+    const prompt = `Analyze this user flow and provide a structured analysis using exactly these headers and format:
 
-Flow Description:
+CURRENT FLOW ANALYSIS:
+[Analyze each step in the current flow]
+- Step 1: [description]
+- Step 2: [description]
+[etc.]
+
+IMPROVED FLOW SUGGESTIONS:
+[Provide specific improvements]
+- Step 1: [description]
+- Step 2: [description]
+[etc.]
+
+GENERAL SUGGESTIONS:
+- [Suggestion 1]
+- [Suggestion 2]
+[etc.]
+
+POTENTIAL ISSUES:
+- [Issue 1]
+- [Issue 2]
+[etc.]
+
+BEST PRACTICES:
+- [Practice 1]
+- [Practice 2]
+[etc.]
+
+User Flow to Analyze:
 ${flowDescription}
 
-Provide a structured analysis including:
-1. Step-by-step analysis of the current flow
-2. Suggested improvements for each step
-3. An optimized version of the flow
-4. General suggestions for improvement
-5. Potential issues to address
-6. Relevant best practices
-
-Format the response to clearly separate each section.`;
+Please maintain this exact structure and headers in your response. Be specific and detailed in your analysis.`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4-0125-preview",
+      model: "gpt-4-turbo",
       messages: [
         {
           role: "user",
@@ -40,9 +59,56 @@ Format the response to clearly separate each section.`;
       max_tokens: 2000,
     });
 
-    return parseFlowAnalysis(response.choices[0]?.message?.content || "");
+    return parseTextFlowAnalysis(response.choices[0]?.message?.content || "");
   } catch (error) {
     console.error("Error in flow analysis:", error);
+    throw error;
+  }
+}
+
+function parseTextFlowAnalysis(content: string): FlowAnalysis {
+  const analysis: FlowAnalysis = {
+    currentFlow: [],
+    improvedFlow: [],
+    generalSuggestions: [],
+    potentialIssues: [],
+    bestPractices: [],
+  };
+
+  try {
+    // Split content by main sections
+    const sections = content.split(/[A-Z\s]+:/);
+    const sectionNames = content.match(/[A-Z\s]+:/g) || [];
+
+    sectionNames.forEach((sectionName, index) => {
+      const sectionContent = sections[index + 1]?.trim() || "";
+      const points = sectionContent
+        .split("\n")
+        .map((line) => line.replace(/^[-•●]\s*/, "").trim())
+        .filter((line) => line.length > 0);
+
+      switch (sectionName.trim().replace(":", "").toLowerCase()) {
+        case "current flow analysis":
+          analysis.currentFlow = points.map((point) => ({ step: point }));
+          break;
+        case "improved flow suggestions":
+          analysis.improvedFlow = points.map((point) => ({ step: point }));
+          break;
+        case "general suggestions":
+          analysis.generalSuggestions = points;
+          break;
+        case "potential issues":
+          analysis.potentialIssues = points;
+          break;
+        case "best practices":
+          analysis.bestPractices = points;
+          break;
+      }
+    });
+
+    return analysis;
+  } catch (error) {
+    console.error("Error parsing text flow analysis:", error);
     throw error;
   }
 }
@@ -55,14 +121,41 @@ export async function analyzeFlowFromImage(
   }
 
   try {
-    const prompt = `As a UX expert, analyze this user flow from the competitor's screenshots and provide detailed feedback and suggestions for improvement. Consider:
-1. What works well in their flow
-2. What could be improved
-3. How we could create a better flow while maintaining the core functionality
-4. Industry best practices
-5. Potential optimizations
+    const prompt = `Analyze this user flow screenshot and provide a structured analysis using exactly these headers and format:
 
-Focus on providing actionable insights and specific improvements.`;
+CURRENT FLOW ANALYSIS:
+[List each step you observe in the flow]
+- Step 1: [description]
+- Step 2: [description]
+[etc.]
+
+IMPROVED FLOW SUGGESTIONS:
+[List specific improvements]
+- Improvement 1: [description]
+- Improvement 2: [description]
+[etc.]
+
+GENERAL SUGGESTIONS:
+- [Suggestion 1]
+- [Suggestion 2]
+[etc.]
+
+POTENTIAL ISSUES:
+- [Issue 1]
+- [Issue 2]
+[etc.]
+
+BEST PRACTICES:
+- [Practice 1]
+- [Practice 2]
+[etc.]
+
+COMPETITOR INSIGHTS:
+- [Insight 1]
+- [Insight 2]
+[etc.]
+
+Please maintain this exact structure and headers in your response. Be specific and detailed in your analysis.`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4-turbo",
@@ -78,75 +171,65 @@ Focus on providing actionable insights and specific improvements.`;
           ],
         },
       ],
-      max_tokens: 2000,
+      max_tokens: 3000,
       temperature: 0.7,
     });
 
-    return parseFlowAnalysis(response.choices[0]?.message?.content || "", true);
+    return parseImageFlowAnalysis(response.choices[0]?.message?.content || "");
   } catch (error) {
     console.error("Error in flow image analysis:", error);
     throw error;
   }
 }
 
-function parseFlowAnalysis(
-  content: string,
-  isImageAnalysis = false,
-): FlowAnalysis {
-  // Initialize with empty arrays to handle cases where sections might be missing
+function parseImageFlowAnalysis(content: string): FlowAnalysis {
   const analysis: FlowAnalysis = {
     currentFlow: [],
     improvedFlow: [],
     generalSuggestions: [],
     potentialIssues: [],
     bestPractices: [],
-    competitorInsights: isImageAnalysis ? [] : undefined,
+    competitorInsights: [],
   };
 
   try {
-    // Split content into sections based on common headers
-    const sections = content.split(/\n(?=[A-Z][^a-z]*:)/);
+    // Split content by main sections
+    const sections = content.split(/[A-Z\s]+:/);
+    const sectionNames = content.match(/[A-Z\s]+:/g) || [];
 
-    sections.forEach((section) => {
-      const lines = section
+    sectionNames.forEach((sectionName, index) => {
+      const sectionContent = sections[index + 1]?.trim() || "";
+      const points = sectionContent
         .split("\n")
-        .map((line) => line.trim())
+        .map((line) => line.replace(/^[-•●]\s*/, "").trim())
         .filter((line) => line.length > 0);
 
-      if (
-        section.toLowerCase().includes("current flow") ||
-        section.toLowerCase().includes("step-by-step analysis")
-      ) {
-        analysis.currentFlow = parseSteps(lines.slice(1));
-      } else if (
-        section.toLowerCase().includes("improved flow") ||
-        section.toLowerCase().includes("optimized flow")
-      ) {
-        analysis.improvedFlow = parseSteps(lines.slice(1));
-      } else if (
-        section.toLowerCase().includes("general suggestions") ||
-        section.toLowerCase().includes("recommendations")
-      ) {
-        analysis.generalSuggestions = parsePoints(lines.slice(1));
-      } else if (
-        section.toLowerCase().includes("potential issues") ||
-        section.toLowerCase().includes("pain points")
-      ) {
-        analysis.potentialIssues = parsePoints(lines.slice(1));
-      } else if (section.toLowerCase().includes("best practices")) {
-        analysis.bestPractices = parsePoints(lines.slice(1));
-      } else if (
-        isImageAnalysis &&
-        section.toLowerCase().includes("competitor")
-      ) {
-        analysis.competitorInsights = parsePoints(lines.slice(1));
+      switch (sectionName.trim().replace(":", "").toLowerCase()) {
+        case "current flow analysis":
+          analysis.currentFlow = points.map((point) => ({ step: point }));
+          break;
+        case "improved flow suggestions":
+          analysis.improvedFlow = points.map((point) => ({ step: point }));
+          break;
+        case "general suggestions":
+          analysis.generalSuggestions = points;
+          break;
+        case "potential issues":
+          analysis.potentialIssues = points;
+          break;
+        case "best practices":
+          analysis.bestPractices = points;
+          break;
+        case "competitor insights":
+          analysis.competitorInsights = points;
+          break;
       }
     });
 
     return analysis;
   } catch (error) {
-    console.error("Error parsing flow analysis:", error);
-    throw new Error("Failed to parse flow analysis");
+    console.error("Error parsing image flow analysis:", error);
+    throw error;
   }
 }
 
