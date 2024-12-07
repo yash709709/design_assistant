@@ -2,59 +2,12 @@
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import Image from "next/image";
-import { CloudArrowUpIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon } from "@heroicons/react/24/outline";
 import classNames from "classnames";
 
 interface ComparisonUploadProps {
   onUpload: (yourDesign: File, competitorDesign: File) => void;
   isUploading: boolean;
-}
-
-interface DesignUploadProps {
-  onDrop: (acceptedFiles: File[]) => void;
-  label: string;
-  isUploading: boolean;
-}
-
-// Separate component for individual design upload
-function DesignUploader({ onDrop, label, isUploading }: DesignUploadProps) {
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      "image/*": [".png", ".jpg", ".jpeg"],
-    },
-    maxFiles: 1,
-    disabled: isUploading,
-  });
-
-  return (
-    <div className="w-full">
-      <p className="text-sm font-medium text-gray-700 mb-2">{label}</p>
-      <div
-        {...getRootProps()}
-        className={classNames(
-          "relative border-2 border-dashed rounded-lg p-4 transition-colors",
-          {
-            "border-blue-400 bg-blue-50": isDragActive,
-            "border-gray-300 hover:border-gray-400": !isDragActive,
-            "cursor-pointer": !isUploading,
-            "cursor-not-allowed opacity-75": isUploading,
-          },
-        )}
-      >
-        <input {...getInputProps()} />
-        {isDragActive ? (
-          <p className="text-sm text-center text-gray-600">
-            Drop the file here...
-          </p>
-        ) : (
-          <p className="text-sm text-center text-gray-600">
-            Drag and drop, or click to select
-          </p>
-        )}
-      </div>
-    </div>
-  );
 }
 
 export default function ComparisonUpload({
@@ -79,57 +32,80 @@ export default function ComparisonUpload({
     onUpload(yourDesign.file, competitorDesign.file);
   };
 
-  const handleYourDesignDrop = useCallback((acceptedFiles: File[]) => {
-    if (acceptedFiles.length === 0) return;
+  const createDropzone = (setter: typeof setYourDesign, label: string) => {
+    const onDrop = useCallback(
+      (acceptedFiles: File[]) => {
+        if (acceptedFiles.length === 0) return;
 
-    const file = acceptedFiles[0];
-    if (!file.type.startsWith("image/")) {
-      setError("Please upload an image file");
-      return;
-    }
+        const file = acceptedFiles[0];
+        if (!file.type.startsWith("image/")) {
+          setError("Please upload an image file");
+          return;
+        }
 
-    setYourDesign({
-      file,
-      preview: URL.createObjectURL(file),
+        setter({
+          file,
+          preview: URL.createObjectURL(file),
+        });
+        setError(null);
+      },
+      [setter],
+    );
+
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({
+      onDrop,
+      accept: {
+        "image/*": [".png", ".jpg", ".jpeg"],
+      },
+      maxFiles: 1,
+      disabled: isUploading,
     });
-    setError(null);
-  }, []);
 
-  const handleCompetitorDesignDrop = useCallback((acceptedFiles: File[]) => {
-    if (acceptedFiles.length === 0) return;
-
-    const file = acceptedFiles[0];
-    if (!file.type.startsWith("image/")) {
-      setError("Please upload an image file");
-      return;
-    }
-
-    setCompetitorDesign({
-      file,
-      preview: URL.createObjectURL(file),
-    });
-    setError(null);
-  }, []);
+    return (
+      <div className="w-full">
+        <p className="text-sm font-medium text-gray-700 mb-2">{label}</p>
+        <div
+          {...getRootProps()}
+          className={classNames(
+            "relative border-2 border-dashed rounded-lg p-4 transition-colors",
+            {
+              "border-blue-400 bg-blue-50": isDragActive,
+              "border-gray-300 hover:border-gray-400": !isDragActive,
+              "cursor-pointer": !isUploading,
+              "cursor-not-allowed opacity-75": isUploading,
+            },
+          )}
+        >
+          <input {...getInputProps()} />
+          <div className="text-center">
+            {isDragActive ? (
+              <p className="text-sm text-gray-600">Drop the file here...</p>
+            ) : (
+              <p className="text-sm text-gray-600">
+                Drag and drop, or click to select
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <DesignUploader
-            onDrop={handleYourDesignDrop}
-            label="Your Design"
-            isUploading={isUploading}
-          />
+          {createDropzone(setYourDesign, "Your Design")}
           {yourDesign && (
             <div className="mt-4 relative">
-              <Image
-                src={yourDesign.preview}
-                alt="Your design preview"
-                width={300}
-                height={200}
-                className="rounded-lg object-contain"
-                objectFit="cover"
-              />
+              <div className="relative w-full h-48">
+                <Image
+                  src={yourDesign.preview}
+                  alt="Your design preview"
+                  fill
+                  className="object-contain rounded-lg"
+                />
+              </div>
               <button
                 onClick={() => setYourDesign(null)}
                 className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
@@ -141,21 +117,17 @@ export default function ComparisonUpload({
         </div>
 
         <div>
-          <DesignUploader
-            onDrop={handleCompetitorDesignDrop}
-            label="Competitor's Design"
-            isUploading={isUploading}
-          />
+          {createDropzone(setCompetitorDesign, "Competitor's Design")}
           {competitorDesign && (
             <div className="mt-4 relative">
-              <Image
-                src={competitorDesign.preview}
-                alt="Competitor design preview"
-                width={300}
-                height={200}
-                className="rounded-lg object-contain"
-                objectFit="cover"
-              />
+              <div className="relative w-full h-48">
+                <Image
+                  src={competitorDesign.preview}
+                  alt="Competitor design preview"
+                  fill
+                  className="object-contain rounded-lg"
+                />
+              </div>
               <button
                 onClick={() => setCompetitorDesign(null)}
                 className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"

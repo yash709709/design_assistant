@@ -23,17 +23,30 @@ export async function POST(request: Request) {
     let analysis;
 
     if (body.mode === "text" && body.flowDescription) {
+      // Handle text-based flow analysis
+      console.log("Processing text-based flow analysis");
       analysis = await analyzeUserFlow(body.flowDescription);
     } else if (body.mode === "image" && body.image) {
+      // Handle image-based flow analysis
+      console.log("Processing image-based flow analysis");
       analysis = await analyzeFlowFromImage(body.image);
     } else {
       return NextResponse.json(
-        { error: "Invalid request format" },
+        {
+          error:
+            "Invalid request format. Please provide either flowDescription or image.",
+        },
         { status: 400, headers },
       );
     }
 
-    return NextResponse.json({ analysis }, { status: 200, headers });
+    return NextResponse.json(
+      { analysis },
+      {
+        status: 200,
+        headers,
+      },
+    );
   } catch (error) {
     console.error("Error in flow analysis route:", error);
     return NextResponse.json(
@@ -47,6 +60,7 @@ export async function POST(request: Request) {
   }
 }
 
+// Handle OPTIONS requests for CORS
 export async function OPTIONS(request: Request) {
   return NextResponse.json(
     {},

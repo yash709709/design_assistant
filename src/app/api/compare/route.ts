@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { analyzeDesign } from "@/lib/api/openai";
+import { compareDesigns } from "@/lib/api/openai-compare";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
@@ -12,46 +12,52 @@ export async function POST(request: Request) {
   };
 
   try {
-    // Skip API key check during build
-    if (
-      process.env.VERCEL_ENV === "production" &&
-      !process.env.OPENAI_API_KEY
-    ) {
+    console.log("Received comparison request");
+
+    const body = await request.json();
+    console.log(
+      "Request body contains images:",
+      !!body.yourDesign,
+      !!body.competitorDesign,
+    );
+
+    if (!body.yourDesign || !body.competitorDesign) {
+      return NextResponse.json(
+        { error: "Both designs are required for comparison" },
+        { status: 400, headers },
+      );
+    }
+
+    if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
         { error: "OpenAI API key is not configured" },
         { status: 500, headers },
       );
     }
 
-    const body = await request.json();
+    console.log("Calling compareDesigns...");
+    const analysis = await compareDesigns(
+      body.yourDesign,
+      body.competitorDesign,
+    );
+    console.log("Analysis completed");
 
-    if (!body.image) {
-      return NextResponse.json(
-        { error: "No image provided" },
-        { status: 400, headers },
-      );
-    }
-
-    const analysis = await analyzeDesign(body.image);
-    return NextResponse.json({ analysis }, { status: 200, headers });
-  } catch (error) {
-    console.error("Error in analysis route:", error);
     return NextResponse.json(
-      { error: "Failed to analyze design" },
+      { analysis },
+      {
+        status: 200,
+        headers,
+      },
+    );
+  } catch (error) {
+    console.error("Error in comparison route:", error);
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error ? error.message : "Failed to compare designs",
+        details: error instanceof Error ? error.stack : undefined,
+      },
       { status: 500, headers },
     );
   }
-}
-
-export async function OPTIONS(request: Request) {
-  return NextResponse.json(
-    {},
-    {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-      },
-    },
-  );
 }

@@ -8,7 +8,7 @@ export interface ABTest {
 }
 
 export interface ComparisonAnalysis {
-  designComparison: string[]; // Changed to simple string array
+  designComparison: string[];
   strengthsWeaknesses: {
     yourDesign: {
       strengths: string[];
@@ -20,24 +20,8 @@ export interface ComparisonAnalysis {
     };
   };
   abTestSuggestions: {
-    designer: ABTest[];
-    productManager: ABTest[];
+    designer: string[];
+    productManager: string[];
   };
-  recommendations: {
-    design: Array<{
-      improvements: string[];
-      priority: "High" | "Medium" | "Low";
-      timeline: "Short-term" | "Medium-term" | "Long-term";
-    }>;
-    strategy: Array<{
-      suggestions: string[];
-      impact: "High" | "Medium" | "Low";
-      effort: "High" | "Medium" | "Low";
-    }>;
-    implementation: Array<{
-      steps: string[];
-      phase: "Phase 1" | "Phase 2" | "Phase 3";
-      resources: string[];
-    }>;
-  };
+  recommendations: string[];
 }

@@ -10,5 +10,5 @@ export interface FlowAnalysis {
   generalSuggestions: string[];
   potentialIssues: string[];
   bestPractices: string[];
-  competitorInsights?: string[]; // For image-based analysis
+  competitorInsights?: string[];
 }
