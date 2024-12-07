@@ -87,7 +87,7 @@ export default function ComparePage() {
             Design Review Assistant
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Compare your design with a competitor's design to get detailed
+            Compare your design with a competitor&apos;s design to get detailed
             insights and improvement suggestions.
           </p>
         </div>
@@ -100,8 +100,8 @@ export default function ComparePage() {
               Design Comparison Analysis
             </h2>
             <p className="text-gray-600">
-              Upload your design and a competitor's design to get a detailed
-              comparison and A/B testing suggestions.
+              Upload your design and a competitor&apos;s design to get a
+              detailed comparison and A/B testing suggestions.
             </p>
           </div>
 
