@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { useDropzone } from "react-dropzone";
 import Image from "next/image";
 import { XMarkIcon } from "@heroicons/react/24/outline";
@@ -8,6 +8,59 @@ import classNames from "classnames";
 interface ComparisonUploadProps {
   onUpload: (yourDesign: File, competitorDesign: File) => void;
   isUploading: boolean;
+}
+
+// Create a separate component for the dropzone
+function DesignDropzone({
+  onFileDrop,
+  label,
+  isDisabled,
+}: {
+  onFileDrop: (file: File) => void;
+  label: string;
+  isDisabled: boolean;
+}) {
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop: (acceptedFiles) => {
+      if (acceptedFiles.length > 0) {
+        onFileDrop(acceptedFiles[0]);
+      }
+    },
+    accept: {
+      "image/*": [".png", ".jpg", ".jpeg"],
+    },
+    maxFiles: 1,
+    disabled: isDisabled,
+  });
+
+  return (
+    <div className="w-full">
+      <p className="text-sm font-medium text-gray-700 mb-2">{label}</p>
+      <div
+        {...getRootProps()}
+        className={classNames(
+          "relative border-2 border-dashed rounded-lg p-4 transition-colors",
+          {
+            "border-blue-400 bg-blue-50": isDragActive,
+            "border-gray-300 hover:border-gray-400": !isDragActive,
+            "cursor-pointer": !isDisabled,
+            "cursor-not-allowed opacity-75": isDisabled,
+          },
+        )}
+      >
+        <input {...getInputProps()} />
+        <div className="text-center">
+          {isDragActive ? (
+            <p className="text-sm text-gray-600">Drop the file here...</p>
+          ) : (
+            <p className="text-sm text-gray-600">
+              Drag and drop, or click to select
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function ComparisonUpload({
@@ -24,6 +77,18 @@ export default function ComparisonUpload({
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const handleFileDrop = (setter: typeof setYourDesign) => (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      setError("Please upload an image file");
+      return;
+    }
+    setter({
+      file,
+      preview: URL.createObjectURL(file),
+    });
+    setError(null);
+  };
+
   const handleSubmit = () => {
     if (!yourDesign || !competitorDesign) {
       setError("Please upload both designs");
@@ -32,70 +97,15 @@ export default function ComparisonUpload({
     onUpload(yourDesign.file, competitorDesign.file);
   };
 
-  const createDropzone = (setter: typeof setYourDesign, label: string) => {
-    const onDrop = useCallback(
-      (acceptedFiles: File[]) => {
-        if (acceptedFiles.length === 0) return;
-
-        const file = acceptedFiles[0];
-        if (!file.type.startsWith("image/")) {
-          setError("Please upload an image file");
-          return;
-        }
-
-        setter({
-          file,
-          preview: URL.createObjectURL(file),
-        });
-        setError(null);
-      },
-      [setter],
-    );
-
-    const { getRootProps, getInputProps, isDragActive } = useDropzone({
-      onDrop,
-      accept: {
-        "image/*": [".png", ".jpg", ".jpeg"],
-      },
-      maxFiles: 1,
-      disabled: isUploading,
-    });
-
-    return (
-      <div className="w-full">
-        <p className="text-sm font-medium text-gray-700 mb-2">{label}</p>
-        <div
-          {...getRootProps()}
-          className={classNames(
-            "relative border-2 border-dashed rounded-lg p-4 transition-colors",
-            {
-              "border-blue-400 bg-blue-50": isDragActive,
-              "border-gray-300 hover:border-gray-400": !isDragActive,
-              "cursor-pointer": !isUploading,
-              "cursor-not-allowed opacity-75": isUploading,
-            },
-          )}
-        >
-          <input {...getInputProps()} />
-          <div className="text-center">
-            {isDragActive ? (
-              <p className="text-sm text-gray-600">Drop the file here...</p>
-            ) : (
-              <p className="text-sm text-gray-600">
-                Drag and drop, or click to select
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          {createDropzone(setYourDesign, "Your Design")}
+          <DesignDropzone
+            onFileDrop={handleFileDrop(setYourDesign)}
+            label="Your Design"
+            isDisabled={isUploading}
+          />
           {yourDesign && (
             <div className="mt-4 relative">
               <div className="relative w-full h-48">
@@ -117,7 +127,11 @@ export default function ComparisonUpload({
         </div>
 
         <div>
-          {createDropzone(setCompetitorDesign, "Competitor's Design")}
+          <DesignDropzone
+            onFileDrop={handleFileDrop(setCompetitorDesign)}
+            label="Competitor's Design"
+            isDisabled={isUploading}
+          />
           {competitorDesign && (
             <div className="mt-4 relative">
               <div className="relative w-full h-48">
