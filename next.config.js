@@ -11,3 +11,6 @@ const nextConfig = {
 };
 
 module.exports = nextConfig;
+
+const openaiApiKey = process.env.OPENAI_API_KEY;
+
